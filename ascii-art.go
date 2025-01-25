@@ -8,83 +8,103 @@ import (
 	"strings"
 )
 
-// Fonction qui prend une chaîne en argument et renvoie une slice de runes
-func convertRunes(chaine string) []rune {
-	return []rune(chaine)
+// Function to convert a string to a slice of runes
+func convertRunes(input string) []rune {
+	return []rune(input)
 }
 
-// Fonction pour lire les lignes du fichier "standard.txt"
-func readFile(chemin string) []string {
-	fichier, err := os.Open(chemin)
+// Function to read lines from the template file (standard, shadow, thinkertoy)
+func readFile(path string) []string {
+	file, err := os.Open(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) // Log an error and stop execution if the file cannot be opened
 	}
-	defer fichier.Close()
+	defer file.Close()
 
-	var lignes []string
-	scanner := bufio.NewScanner(fichier)
+	var lines []string
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		lignes = append(lignes, scanner.Text())
+		lines = append(lines, scanner.Text()) // Add each line to the slice
 	}
-
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		log.Fatal(err) // Log any errors encountered during scanning
 	}
-
-	return lignes
+	return lines
 }
 
-// Fonction pour calculer les indices des runes dans le fichier "standard.txt"
+// Function to calculate the indices of runes in the template file
 func getRunesIndex(runes []rune) []int {
 	var indices []int
 	for _, r := range runes {
-		index := ((int(r) - 32) * 9) + 2
+		// Calculate the index for each rune based on ASCII value
+		index := (int(r) - 32) * 9
 		indices = append(indices, index)
 	}
 	return indices
 }
 
-// Fonction récursive pour afficher les lignes intercalées pour chaque rune
-func recursiveGetLines(indices []int, lignes []string, ligneActuelle int) {
-	if ligneActuelle >= 8 {
-		return //Cas de base : arrêt après 9 lignes
+// Recursive function to print the interleaved lines for each rune
+func recursiveGetLines(indices []int, lines []string, currentLine int) {
+	if currentLine >= 9 {
+		return // Base case: stop after 9 lines
 	}
-	// Affichage de la ligneActuelle pour chaque rune
+	// Print the current line for each rune
 	for _, index := range indices {
-		if index+ligneActuelle < len(lignes) {
-			fmt.Printf("%s ", lignes[index+(ligneActuelle-1)])
+		if index+currentLine < len(lines) {
+			fmt.Printf("%s ", lines[index+currentLine])
 		}
 	}
 	fmt.Println()
-
-	// Appel récursif pour la ligne suivante
-	recursiveGetLines(indices, lignes, ligneActuelle+1)
+	// Recursive call for the next line
+	recursiveGetLines(indices, lines, currentLine+1)
 }
 
 func main() {
-	// Vérification de la présence d'un argument
-	if len(os.Args) < 2 {
-		fmt.Println("Veuillez fournir une chaîne de caractères en argument.")
+	// Check the number of arguments passed
+	if len(os.Args) != 3 {
+		fmt.Println("Usage: go run . [STRING] [BANNER]") // Provide correct usage instructions
 		os.Exit(1)
 	}
-	chaine := os.Args[1]
-	chaine = strings.ReplaceAll(chaine, `\n`, "\n")
-	segments := strings.Split(chaine, "\n")
-	// Lire le fichier "standard.txt" et récupérer les lignes
-	lignes := readFile("standard.txt")
 
-	// Afficher chaque segment avec un espacement approprié
-	for _, segment := range segments {
+	// Retrieve the input string
+	inputString := os.Args[1]
+
+	// Retrieve the template name
+	template := os.Args[2]
+
+	// Validate if the template is among the allowed ones
+	if template != "standard" && template != "shadow" && template != "thinkertoy" {
+		fmt.Println("Usage: go run . [STRING] [BANNER]") // Repeat usage instructions for invalid templates
+		os.Exit(1)
+	}
+
+	// Load the corresponding template file
+	templatePath := template + ".txt"
+	lines := readFile(templatePath)
+
+	// Replace occurrences of `\n` in the string with actual newlines
+	inputString = strings.ReplaceAll(inputString, `\n`, "\n")
+
+	// Split the string into segments by newlines
+	segments := strings.Split(inputString, "\n")
+
+	// Process and display each segment
+	for i, segment := range segments {
+		// Handle empty segments (corresponding to \n in the input)
 		if segment == "" {
-			fmt.Print("\n") // Imprimer un seul saut de ligne pour le \n
-		} else {
-			runes := convertRunes(segment)
-
-			// Calculer les indices des runes dans le fichier
-			indices := getRunesIndex(runes)
-
-			// Afficher les lignes pour chaque rune de manière récursive
-			recursiveGetLines(indices, lignes, 0)
+			if i < len(segments)-1 {
+				fmt.Println() // Print a single newline for `\n`
+			}
+			continue
 		}
+
+		// Convert the segment into runes
+		runes := convertRunes(segment)
+
+		// Calculate the indices for the runes in the template file
+		indices := getRunesIndex(runes)
+
+		// Print the lines for each rune recursively
+		recursiveGetLines(indices, lines, 0)
 	}
 }
